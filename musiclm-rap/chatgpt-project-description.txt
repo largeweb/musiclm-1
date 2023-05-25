@@ -1,0 +1,31 @@
+--- Description for ChatGPT/OpenAI Playground, describing the MusicLM architecture and the planned project. ---
+
+The authors propose MusicLM, a hierarchical model for generating music from text descriptions. MusicLM extends an existing model called AudioLM which generates speech and piano music. MusicLM adds the ability to condition the generation on text prompts. The model generates high-fidelity music at 24 kHz that is consistent over several minutes.
+
+MusicLM uses three pretrained models to obtain discrete representations of the audio and text. The first is SoundStream, which quantizes audio into "acoustic tokens" that capture fine details. The second is a BERT model that extracts "semantic tokens" representing long-term structure. The third is MuLan, a joint embedding model that maps music and text into a shared embedding space. MusicLM then hierarchically models these representations.
+
+The first stage in MusicLM is the "semantic modeling stage" which maps the MuLan audio embedding to semantic tokens. The second stage is the "acoustic modeling stage" which predicts acoustic tokens conditioned on the semantic tokens and MuLan embedding. This stage has a coarse part for lower frequency information and a fine part for higher frequency details.
+
+MusicLM is trained on 280k hours of unlabeled music using the MuLan audio embedding as conditioning. At inference, the MuLan text embedding computed from the input text prompt is used instead. The model can then continue generating for several minutes while staying consistent. The temperature for sampling is tuned to balance diversity and coherence.
+
+The authors introduce MusicCaps, a dataset of 5.5k music clips paired with rich text descriptions, to evaluate MusicLM. The dataset has audio from AudioSet labeled by musicians. Models are evaluated on audio quality using the Fréchet Audio Distance and faithfulness to the text using KL divergence from a classifier and cycle consistency with MuLan.
+
+Experiments show MusicLM outperforms baselines Mubert and Riffusion on all metrics. A human study also shows strong preference for MusicLM in matching the text prompt. Analyzing which information different tokens represent shows the semantic tokens help match the text while the acoustic tokens provide diversity. MusicLM can also generate sequences over 5 minutes long with minor modifications.
+
+MusicLM can also be conditioned on melody in addition to text by training a model to get embeddings of melodies that are invariant to other acoustic factors. The melody embeddings are quantized and concatenated with the MuLan audio tokens. At inference, melody embeddings from the input audio are concatenated with the MuLan text embedding.
+
+The risks of generating music include model bias, cultural appropriation, and misuse of creative content. The authors study how much MusicLM memorizes from its training data and find while a small fraction of sequences are memorized exactly, 1% show "approximate" memorization with a defined metric. They release no models to avoid misuse.
+
+In conclusion, MusicLM generates high-quality, consistent music from text prompts by hierarchically modeling representations from SoundStream, a BERT model, and MuLan. Experiments show it outperforms baselines and can generate long, coherent music with additional conditioning like melody. The authors release MusicCaps to support further research but not the models themselves due to risks. Future work could generate lyrics, improve vocal quality, model song structure, or generate at higher sample rates.
+
+
+
+To implement MusicLM for generating rap instrumental beats, you would first collect a dataset of 1000 rap instrumental audio clips from YouTube and their corresponding text captions describing the clips. You would then extract the audio from these clips to get wav files for each caption. These wav files and captions would be used to train the MuLan model, which learns a joint embedding space for audio and text.
+
+The MuLaN model consists of an audio transformer that operates on the spectrogram of the wav files and a text transformer that operates on tokenized text captions. These are trained together using contrastive learning to map the audio and text to a shared 128-dimensional embedding space. After training on your dataset, MuLaN can embed either new audio clips or text captions into this space.
+
+The next step would be to quantize the MuLaN embeddings into discrete tokens to condition the AudioLM model. The MuLaNEmbedQuantizer is used for this, which quantizes the embeddings into 8 tokens for each of 3 namespaces (semantic, coarse, fine) corresponding to different stages in AudioLM. The quantized tokens for each namespace are concatenated to get the final conditioning tokens.
+
+AudioLM itself consists of 3 transformer stages: semantic, coarse, and fine. The semantic stage takes in the conditioning tokens from MuLaNEmbedQuantizer and predicts "semantic tokens." The coarse stage takes in the semantic tokens and conditioning tokens to predict "coarse tokens." Finally, the fine stage predicts the final "acoustic tokens" from the coarse tokens and conditioning tokens. Each stage is trained or finetuned using an appropriate Trainer class.
+
+Finally, the trained AudioLM and MuLaNEmbedQuantizer are passed to the MusicLM model. MusicLM can then generate samples from a text prompt and select the sample whose embedding is closest to the prompt's embedding in the MuLaN space as the best match. So you could prompt MusicLM with one of your rap instrumental captions and it would generate 4 samples, then pick the one MuLaN identifies as the best match to return as the generated clip for that caption.
